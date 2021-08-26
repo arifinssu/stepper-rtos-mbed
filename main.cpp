@@ -1,8 +1,6 @@
 #include "mbed.h"
 #include "mbedSerial.h"
 #include "FlexyStepper.h"
-#include <chrono>
-#include <cstdint>
 
 #define CONVEYOR_PWM_PIN        PB_0
 #define CONVEYOR_FWD_PIN        PC_4
@@ -27,23 +25,19 @@ FlexyStepper stepper6(PB_13, PB_14);
 MbedSerial Serial(USBTX, USBRX);
 String dataIn;
 
-// Thread task1(osPriorityNormal, 1024);
-// Thread task2(osPriorityNormal, 1024);
-Thread task1;
-Thread task2;
+Thread task1(osPriorityNormal, 1024);
+Thread task2(osPriorityNormal, 1024);
 // bool executed = 1;
 
 bool checkAllStepper()
 {
     int res = 0;
-
     res += !stepper.processMovement();
     res += !stepper2.processMovement();
     res += !stepper3.processMovement();
     res += !stepper4.processMovement();
     res += !stepper5.processMovement();
     res += !stepper6.processMovement();
-
     if (res > 0)
     {
         return 0;
@@ -54,7 +48,6 @@ bool checkAllStepper()
 void execute_stepper()
 {
     while(!checkAllStepper());
-
     Serial.println("done");
 }
 
@@ -68,7 +61,7 @@ void t2()
         {
             Serial.println("stepper start");
             execute_stepper();
-            // osThreadSetPriority(task2.get_id(), osPriorityIdle);
+            osThreadSetPriority(task2.get_id(), osPriorityIdle);
         // }
         }
         osThreadYield();
@@ -106,10 +99,10 @@ void t1()
                     stepper4.setTargetPositionInSteps(1600);
                     stepper5.setTargetPositionInSteps(1600);
                     stepper6.setTargetPositionInSteps(1600);
-                    // osThreadSetPriority(task2.get_id(), osPriorityAboveNormal1);
+                    osThreadSetPriority(task2.get_id(), osPriorityNormal);
                     // executed = 0;
                 }
-                else if (hasil == "2")
+                else if (hasil == "0")
                 {
                     Serial.println("back stepper");
                     stepper.setTargetPositionInSteps(0);
@@ -118,7 +111,7 @@ void t1()
                     stepper4.setTargetPositionInSteps(0);
                     stepper5.setTargetPositionInSteps(0);
                     stepper6.setTargetPositionInSteps(0);
-                    // osThreadSetPriority(task2.get_id(), osPriorityAboveNormal1);
+                    osThreadSetPriority(task2.get_id(), osPriorityNormal);
                     // executed = 0;
                 }
             }
@@ -130,7 +123,7 @@ void t1()
 int main()
 {
     Serial.begin(9600);
-    Serial.println("debug");
+    Serial.println("debug-ok");
 
     stepper.setStepsPerRevolution(800);
     stepper.setAccelerationInStepsPerSecondPerSecond(800);
@@ -156,15 +149,14 @@ int main()
     stepper6.setAccelerationInStepsPerSecondPerSecond(800);
     stepper6.setSpeedInStepsPerSecond(800);
 
-    // task1.start(&t1);
+    task1.start(&t1);
     task2.start(&t2);
 
-    // osThreadSetPriority(task1.get_id(), osPriorityNormal1);
-    // osThreadSetPriority(task2.get_id(), osPriorityIdle);
-    // task1.join();
-    // task2.join();
+    osThreadSetPriority(task1.get_id(), osPriorityNormal);
+    osThreadSetPriority(task2.get_id(), osPriorityIdle);
+    task1.join();
+    task2.join();
 
-    t1();
-
-    HAL_Delay(osWaitForever);
+    while(1);
+    // HAL_Delay(osWaitForever);
 }

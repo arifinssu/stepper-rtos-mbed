@@ -157,6 +157,6 @@ int main()
     task1.join();
     task2.join();
 
-    while(1);
+    // while(1);
     // HAL_Delay(osWaitForever);
 }
